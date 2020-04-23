@@ -81,7 +81,6 @@ class ContractController extends AbstractController
         }
 
         $input = $this->request->all();
-        $input['locale'] = $this->translator->getLocale();
 
     	try {
 			return $contract->createOrder($input);

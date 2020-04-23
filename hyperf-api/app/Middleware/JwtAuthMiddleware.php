@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Middleware;
 
 use App\Model\User;
+use App\Model\UserConfig;
 use Phper666\JwtAuth\Jwt;
 use Hyperf\Utils\Context;
 use Psr\Http\Message\ResponseInterface;
@@ -60,8 +61,14 @@ class JwtAuthMiddleware implements MiddlewareInterface
             $user = User::query()
             ->where('account', $jwtData['account'])
             ->first();
+
+            $user_config = UserConfig::query()
+            ->where('uid', $user->id)
+            ->first();
+
             $request = Context::get(ServerRequestInterface::class);
             $request = $request->withAttribute('user', $user);
+            $request = $request->withAttribute('user', $user_config);
             Context::set(ServerRequestInterface::class, $request);
 
             return $handler->handle($request);

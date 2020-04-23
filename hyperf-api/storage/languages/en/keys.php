@@ -6,11 +6,8 @@ return [
 	'phone' => '手机号',
 	'email' => '邮箱',
 	'way'   => '登录方式',
-	'original_password' => '原密码',
 	'password' => '密码',
 	'password_confirmation' => '确认密码',
-	'google_code' => '谷歌验证码',
-	'google_secret' => '谷歌密钥',
 	'buynum' => '买入数量',
 	'type' => '类型',
 	'otype' => '买入方向',
@@ -21,4 +18,3 @@ return [
 	'max_chicang' => '最大持仓量',
 
 ];
-

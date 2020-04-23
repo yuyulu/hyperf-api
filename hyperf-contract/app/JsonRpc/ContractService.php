@@ -13,10 +13,11 @@ class ContractService {
     public function createOrder(array $order) :array
     {
         return [
-        	'code' => 200,
+        	'code' => 500,
+        	'messages' => 'not_released',
             'method' => 'createOrder',
-            'message' => "下单成功",
             'order' => $order,
+
         ];
     }
 }

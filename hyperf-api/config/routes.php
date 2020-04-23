@@ -19,8 +19,10 @@ Router::post('/user/register', 'App\Controller\Auth\RegisterController@register'
 
 //必须验证TOKEN
 Router::addGroup('/user/', function () {
-	Router::get('info','App\Controller\UserController@info');
+	Router::get('details','App\Controller\UserController@details');
     Router::post('logout', 'App\Controller\Auth\LoginController@logout');
+    Router::get('registerLink','App\Controller\UserController@registerLink');
+    
 }, [
     'middleware' => [App\Middleware\JwtAuthMiddleware::class]
 ]);
