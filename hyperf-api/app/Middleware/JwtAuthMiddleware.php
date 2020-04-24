@@ -68,7 +68,7 @@ class JwtAuthMiddleware implements MiddlewareInterface
 
             $request = Context::get(ServerRequestInterface::class);
             $request = $request->withAttribute('user', $user);
-            $request = $request->withAttribute('user', $user_config);
+            $request = $request->withAttribute('user_config', $user_config);
             Context::set(ServerRequestInterface::class, $request);
 
             return $handler->handle($request);

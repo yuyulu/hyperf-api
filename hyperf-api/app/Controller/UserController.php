@@ -12,11 +12,29 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\User;
+use Hyperf\DbConnection\Db;
 use App\JsonRpc\SendSmsService;
 use App\JsonRpc\SendEmailService;
+use Hyperf\Di\Annotation\Inject;
+use App\Service\CheckSmsService;
+use App\Service\CheckEmailService;
+
 
 class UserController extends AbstractController
 {
+
+    /**
+     * @Inject
+     * @var CheckSmsService
+     */
+    protected $checksms;
+
+    /**
+     * @Inject
+     * @var CheckEmailService
+     */
+    protected $checkemail;
 
     /**
      * 查询用户信息 包含了 身份认证和个人配置
@@ -149,13 +167,15 @@ class UserController extends AbstractController
 
         if ($this->request->hasFile('avatar')) {
             $avatar_upload = $this->request->file('avatar');
-            $avatar_upload_result = $this->upload($avatar_upload);
+            $avatar_upload_result = $this->upload($avatar_upload,$filesystem);
         }
 
-        if(preg_match('/^(data:\s*image\/(\w+);base64,)/', $this->request->input('avatar'), $result)){
-            $avatar_upload_result = $this->base64Upload($this->request->input('avatar'));
+        if ($this->request->input('avatar')) {
+           if (preg_match('/^(data:\s*image\/(\w+);base64,)/', $this->request->input('avatar'), $result)){
+                $avatar_upload_result = $this->base64Upload($this->request->input('avatar'),$filesystem);
+            } 
         }
-
+        
         if ($avatar_upload_result['code'] != 200) {
             return $this->failed($avatar_upload_result['msg']);
         }
@@ -163,7 +183,7 @@ class UserController extends AbstractController
         $avatar = $avatar_upload_result['data'];
 
         if(!$avatar){
-            return $this->failed(__('please_upload_avatar'));
+            return $this->failed(__('messages.missing_file'));
         }
 
         // Check if a file exists
@@ -175,34 +195,7 @@ class UserController extends AbstractController
         $user->avatar = $avatar;
         $user->save();
         
-        $this->success('',__('success.successfully_modified'));
-
-    }
-
-    /**
-     * 验证原密码是否正确
-     * @return [type] [description]
-     */
-    public function verifyPassword()
-    {
-        $user = $this->request->getAttribute('user');
-        if(!in_array($this->request->input('type'),['password','payment'])){
-            return $this->failed(__('messages.wrong_modification_type'));
-        }
-
-        if ($this->request->input('type') === 'password') {
-            if (!Hash::check($this->request->input('old_password'), $user->password)) {
-                return $this->failed(__('messages.original_password_is_incorrect'));
-            }
-        }
-
-        if ($this->request->input('type') === 'payment') {
-            if (!Hash::check($this->request->input('old_password'), $user->payment_password)) {
-                return $this->failed(__('messages.original_password_is_incorrect'));
-            }
-        }
-
-        return $this->success('', __('success.successful_verification'));
+        return $this->success('',__('success.successfully_modified'));
 
     }
 
@@ -236,12 +229,13 @@ class UserController extends AbstractController
         //解析原密码
         $decrypt_old_password = $this->privateDecrypt($this->request->input('old_password'));
         $old_password = $decrypt_old_password['data'];
+
         if($decrypt_old_password['code'] != 200){
             return $this->failed($decrypt_old_password['msg']);
         }
 
-        if (!Hash::check($old_password, $user->password)) {
-            return $this->failed(__('Original password'));
+        if (!password_verify($old_password, $user->password)) {
+            return $this->failed(__('messages.original_password_is_incorrect'));
         }
 
         $decrypt_password = $this->privateDecrypt($this->request->input('password'));
@@ -259,24 +253,26 @@ class UserController extends AbstractController
         $password = $decrypt_password['data'];
         $password_confirmation = $decrypt_password_confirmation['data'];
 
-        if($password != $password_confirmation){
-            return $this->failed(__('Passwords are inconsistent'));
+
+        if ($password != $password_confirmation) {
+            return $this->failed(__('messages.two_password_is_inconsistent'));
         }
 
         if($old_password == $password){
-            return $this->failed(__('Original password').__('Password confirmation').__('Cannot be the same'));
+            return $this->failed(__('messages.cannot_be_the_same_as_the_original_password'));
         }
 
-        $new_pass = password_hash($password);
+        $new_pass = password_hash($password,PASSWORD_DEFAULT);
         $user->password = $new_pass;
         $user->save();
 
-        return $this->success('', __('Successfully modified'));
+        return $this->success('', __('success.successfully_modified'));
     }
 
     public function resetPaymentPassword()
     {
         $user = $this->request->getAttribute('user');
+        $user_config = $this->request->getAttribute('user_config');
         $validator = $this->validationFactory->make(
             $this->request->all(),
             [
@@ -287,10 +283,10 @@ class UserController extends AbstractController
             ],
             [],
             [
-                'code' => __('Code'),
-                'old_password' => __('Original password'),
-                'password' => __('Password'),
-                'password_confirmation' => __('Password confirmation'),
+                'code' => __('keys.phone_code'),
+                'old_password' => __('keys.original_password'),
+                'password' => __('keys.password'),
+                'password_confirmation' => __('keys.password_confirmation'),
             ]
         );
 
@@ -298,6 +294,11 @@ class UserController extends AbstractController
             $errorMessage = $validator->errors()->first();
             return $this->failed($errorMessage);
         }
+
+        if (!$user->payment_password) {
+            return $this->failed(__('keys.payment_password').__('messages.not_set'));
+        }
+
         $decrypt_old_password = $this->privateDecrypt($this->request->input('old_password'));
 
         if($decrypt_old_password['code'] != 200){
@@ -305,8 +306,9 @@ class UserController extends AbstractController
         }
         $old_password = $decrypt_old_password['data'];
 
-        if (!Hash::check($old_password, $user->payment_password)) {
-            return $this->failed(__('Original password'));
+
+        if (!password_verify($old_password, $user->payment_password)) {
+            return $this->failed(__('messages.original_password_is_incorrect'));
         }
 
         $decrypt_password = $this->privateDecrypt($this->request->input('password'));
@@ -325,25 +327,31 @@ class UserController extends AbstractController
         $password_confirmation = $decrypt_password_confirmation['data'];
 
         if($password != $password_confirmation){
-            return $this->failed(__('Passwords are inconsistent'));
+            return $this->failed(__('messages.two_password_is_inconsistent'));
         }
 
         if($old_password == $password){
-            return $this->failed(__('Original password').__('Password confirmation').__('Cannot be the same'));
+            return $this->failed(__('messages.cannot_be_the_same_as_the_original_password'));
         }
 
-        ///检测验证码
-        $result = $this->checkSmsCode($user->phone,$this->request->input('code'));
+        if ($user_config->login_from == 1) {
+            //检测验证码
+            $result = $this->checksms->checkSmsCode($user->phone,$this->request->input('code'));
+        } else {
+            $result = $this->checkemail->checkEmailCode($user->email,$this->request->input('code'));
+        }
+
+        
         if($result['code'] != 200){
-            return $this->failed($this->errStatus,$result['msg']);
+            return $this->failed($result['msg']);
         }
 
-        $new_pass = Hash::make($password);
+        $new_pass = password_hash($password,PASSWORD_DEFAULT);
 
         $user->payment_password = $new_pass;
         $user->save();
 
-        return $this->success('', __('Successfully modified'));
+        return $this->success('', __('success.successfully_modified'));
     }
 
     public function forgetPassword()
@@ -362,7 +370,6 @@ class UserController extends AbstractController
                 'phone' => __('keys.phone'),
                 'email' => __('keys.email'),
                 'code' => __('keys.code'),
-                'old_password' => __('keys.original_password'),
                 'password' => __('keys.password'),
                 'password_confirmation' => __('keys.password_confirmation'),
             ]
@@ -394,40 +401,40 @@ class UserController extends AbstractController
 
         //如果发送手机验证码
         if($this->request->input('phone')) {
-            $user = User::where('phone', $this->request->input('phone'))->first();
+            $user = Db::table('users')->where('phone', $this->request->input('phone'))->first();
             if (empty($user)) {
-                return $this->failed(__('Phone').__('does not exist'));
+                return $this->failed(__('keys.phone').__('messages.does_not_exist'));
             }
             //检测验证码
-            $result = $this->checkSmsCode($user->phone,$this->request->input('code'));
+            $result = $this->checksms->checkSmsCode($user->phone,$this->request->input('code'));
             if($result['code'] != 200){
-                return $this->failed($this->errStatus,$result['msg']);
+                return $this->failed($result['msg']);
             }
         }
 
         //如果发送邮箱验证码
         if($this->request->input('email')) {
-            $user = User::where('email', $this->request->input('email'))->first();
+            $user = Db::table('users')->where('email', $this->request->input('email'))->first();
             if (empty($user)) {
-                return $this->failed(__('Email').__('does not exist'));
+                return $this->failed(__('keys.email').__('messages.does_not_exist'));
             }
             //检测验证码
-            $result = $this->checkEmailCode($user->email,$this->request->input('code'));
+            $result = $this->checkemail->checkEmailCode($user->email,$this->request->input('code'));
             if($result['code'] != 200){
-                return $this->failed($this->errStatus,$result['msg']);
+                return $this->failed($result['msg']);
             }
         }
 
         //如果没有找到用户
         if(empty($user)){
-            return $this->failed(__('Missing phone number or email'));
+            return $this->failed(__('messages.missing_phone_or_email'));
         }
 
-        $new_pass = bcrypt($password);
-        $user->password = $new_pass;
-        $user->save();
+        $new_pass = password_hash($password,PASSWORD_DEFAULT);
 
-        return $this->success('', __('Set up successfully'));
+        Db::table('users')->where('id',$user->id)->update(['password' => $new_pass]);
+
+        return $this->success('', __('success.set_up_successfully'));
 
 
     }
@@ -436,7 +443,7 @@ class UserController extends AbstractController
     {
         $user_config = $this->request->getAttribute('user_config');
         if($user_config->payment_password_set === 1){
-            return $this->failed(__('Payment password').__('Already set'));
+            return $this->failed(__('keys.payment_password').__('messages.already_set'));
         }
 
         $validator = $this->validationFactory->make(
@@ -448,9 +455,9 @@ class UserController extends AbstractController
             ],
             [],
             [
-                'code' => __('Code'),
-                'password' => __('Password'),
-                'password_confirmation' => __('Password confirmation'),
+                'code' => __('keys.code'),
+                'password' => __('keys.password'),
+                'password_confirmation' => __('keys.password_confirmation'),
             ]
         );
         if ($validator->fails()) {
@@ -475,23 +482,27 @@ class UserController extends AbstractController
         $password = $decrypt_password['data'];
         $password_confirmation = $decrypt_password_confirmation['data'];
 
-        if($password != $password_confirmation){
-            return $this->failed(__('Passwords are inconsistent'));
+        if ($password != $password_confirmation) {
+            return $this->failed(__('messages.two_password_is_inconsistent'));
         }
 
         //检测验证码
-        $result1 = $this->checkSmsCode($user->phone,$this->request->input('code'));
-        $result2 = $this->checkEmailCode($user->email,$this->request->input('code'));
-        if($result1['code'] != 200 && $result2['code'] != 200){
-            return $this->failed($this->errStatus,__('Code'));
+        if ($user_config->login_from == 1) {
+            $result = $this->checksms->checkSmsCode($user->phone,$this->request->input('code'));
+        } else {
+            $result = $this->checkemail->checkEmailCode($user->email,$this->request->input('code'));
         }
 
-        $new_pass = Hash::make($password);
+        if ($result['code'] != 200) {
+            return $this->failed(__('Code'));
+        }
+
+        $new_pass = password_hash($password,PASSWORD_DEFAULT);
         $user->payment_password = $new_pass;
         $user->save();
         $user_config->payment_password_set = 1;
         $user_config->save();
-        return $this->success('', __('Set up successfully'));
+        return $this->success('', __('success.set_up_successfully'));
 
     }
 
@@ -505,8 +516,8 @@ class UserController extends AbstractController
             ],
             [],
             [
-                'code' => __('Code'),
-                'phone' => __('Phone'),
+                'code' => __('keys.phone_code'),
+                'phone' => __('keys.phone'),
             ]
         );
         if ($validator->fails()) {
@@ -518,43 +529,48 @@ class UserController extends AbstractController
         $user = $this->request->getAttribute('user');
 
         if ($user_config->phone_bind) {
-            return $this->failed(__('Phone').__('Already bound'));
+            return $this->failed(__('keys.phone').__('messages.already_bound'));
         }
 
-        $post = $this->request->post();
+        $post = $this->request->all();
         if (!isset($post['code'])) {
-            return $this->failed(__('Code').__('Can not be empty'));
+            return $this->failed(__('messages.code_error'));
         }
 
         if (!isset($post['phone'])) {
-            return $this->failed(__('Phone').__('Can not be empty'));
+            return $this->failed(__('keys.phone').__('messages.does_not_exist'));
         }
 
         $phone = $post['phone'];
         $bind = User::where('phone',$phone)->first();
         if(!empty($bind)){
-            return $this->failed( __('Phone').__('Already bound'));
+            return $this->failed(__('keys.phone').__('messages.already_bound'));
         }
 
-        // 验证验证码
-        $result = $this->checkSmsCode($phone, $post['code']);
-        if ($result['code'] == 200) {
-            $user_config->phone_verify_at = now();
-            $user_config->phone_bind = 1;
-            $user_config->save();
-
-            $user->phone = $phone;
-            $user->save();
-
-            if($user_config->email_bind && $user_config->phone_bind){
-                $user_config->security_level += 1;
-                $user_config->save();
-            }
-
-            return $this->success('', __('Bind successfully'));
+        //检测验证码
+        if ($user_config->login_from == 1) {
+            $result = $this->checksms->checkSmsCode($user->phone,$post['code']);
         } else {
-            return $this->failed($result['msg']);
+            $result = $this->checkemail->checkEmailCode($user->email,$post['code']);
         }
+
+        if ($result['code'] != 200) {
+            return $this->failed(__('messages.code_error'));
+        }
+
+        $user_config->phone_verify_at = now();
+        $user_config->phone_bind = 1;
+        $user_config->save();
+
+        $user->phone = $phone;
+        $user->save();
+
+        if($user_config->email_bind && $user_config->phone_bind){
+            $user_config->security_level += 1;
+            $user_config->save();
+        }
+
+        return $this->success('', __('success.bind_successfully'));
     }
 
     public function emailBind()
@@ -562,40 +578,45 @@ class UserController extends AbstractController
         $user = $this->request->getAttribute('user');
         $user_config = $this->request->getAttribute('user_config');
         if ($user_config->email_bind) {
-            return $this->failed(__('Email').__('Already bound'));
+            return $this->failed(__('keys.email').__('messages.already_bound'));
         }
         $post = $this->request->all();
         if (!isset($post['code'])) {
-            return $this->failed(__('Code').__('Can not be empty'));
+            return $this->failed(__('messages.code_error'));
         }
 
         if (!isset($post['email'])) {
-            return $this->failed(__('Email').__('Can not be empty'));
+            return $this->failed(__('keys.email').__('does_not_exist'));
         }
         $email = $post['email'];
         $exists = User::where('email',$email)->first();
         if(!empty($exists)){
-            return $this->failed(__('Email').__('Already bound'));
+            return $this->failed(__('keys.email').__('messages.already_bound'));
         }
 
-        // 验证验证码
-        $result = $this->checkEmailCode($email, $post['code']);
-        if ($result['code'] == 200) {
-            $user_config->email_verify_at = now();
-            $user_config->email_bind = 1;
-            $user_config->save();
-
-            $user->email = $email;
-            $user->save();
-
-            if($user_config->email_bind && $user_config->phone_bind){
-                $user_config->security_level += 1;
-                $user_config->save();
-            }
-            return $this->success('', __('Bind successfully'));
+        //检测验证码
+        if ($user_config->login_from == 1) {
+            $result = $this->checksms->checkSmsCode($user->phone,$email);
         } else {
-            return $this->failed($result['msg']);
+            $result = $this->checkemail->checkEmailCode($user->email,$email);
         }
+
+        if ($result['code'] != 200) {
+            return $this->failed(__('messages.code_error'));
+        }
+        
+        $user_config->email_verify_at = now();
+        $user_config->email_bind = 1;
+        $user_config->save();
+
+        $user->email = $email;
+        $user->save();
+
+        if($user_config->email_bind && $user_config->phone_bind){
+            $user_config->security_level += 1;
+            $user_config->save();
+        }
+        return $this->success('', __('messages.bind_successfully'));
     }
 
     /**
@@ -609,7 +630,7 @@ class UserController extends AbstractController
         $parameter = [];
         return $this->success(
             $this->successStatus,
-            __('Get success'),
+            __('success.get_success'),
             ['createSecret' => $createSecret, "parameter" => $parameter]
         );
     }
@@ -625,7 +646,7 @@ class UserController extends AbstractController
             ],
             [],
             [
-                'code' => __('Code'),
+                'code' => __('keys.code'),
                 'google_code' => __('keys.google_code'),
                 'google_secret' => __('keys.google_secret'),
             ]
@@ -638,7 +659,7 @@ class UserController extends AbstractController
         $user = $this->request->getAttribute('user');
         $user_config = $this->request->getAttribute('user_config');
         if ($user_config->google_bind) {
-            return $this->failed(__('Already bound'));
+            return $this->failed(__('keys.google_code').__('messages.already_bound'));
         }
 
         $post = $this->request->all();
@@ -647,10 +668,14 @@ class UserController extends AbstractController
         }
 
         //检测验证码
-        $result1 = $this->checkSmsCode($user->phone,$this->request->input('code'));
-        $result2 = $this->checkEmailCode($user->email,$this->request->input('code'));
-        if($result1['code'] != 200 && $result2['code'] != 200){
-            return $this->failed(__('messages.google_code_error'));
+        if ($user_config->login_from == 1) {
+            $result = $this->checksms->checkSmsCode($user->phone,$email);
+        } else {
+            $result = $this->checkemail->checkEmailCode($user->email,$email);
+        }
+
+        if ($result['code'] != 200) {
+            return $this->failed(__('messages.code_error'));
         }
 
         $google = $post['google_secret'];
@@ -660,7 +685,7 @@ class UserController extends AbstractController
             $user_config->google_bind = 1;
             $user_config->google_verify = 1;
             $user_config->save();
-            return $this->success('', __('Bind successfully'));
+            return $this->success('', __('success.bind_successfully'));
         } else {
             return $this->failed(__('messages.google_code_error'));
         }
@@ -673,7 +698,7 @@ class UserController extends AbstractController
         $user = $this->request->getAttribute('user');
         //验证是否绑定
         if ($user_config->google_bind == 0) {
-            return $this->failed(__('Not yet bound').__('keys.google_code'));
+            return $this->failed(__('messages.please_bind_google_code_first'));
         }
 
         // 验证验证码和密钥是否相同
@@ -686,7 +711,7 @@ class UserController extends AbstractController
             $result1 = $this->checkSmsCode($user->phone,$this->request->input('code'));
             $result2 = $this->checkEmailCode($user->email,$this->request->input('code'));
             if($result1['code'] != 200 && $result2['code'] != 200){
-                return $this->failed($this->errStatus,__('Code'));
+                return $this->failed(__('messages.code_error'));
             }
         }
 
@@ -694,14 +719,14 @@ class UserController extends AbstractController
         if ($this->request->input('key') == 'start') {
             $user_config->google_verify = 1;
             $user_config->save();
-            return $this->success('', __('Open successfully'));
+            return $this->success('', __('success.open_successfully'));
         }
 
         //关闭谷歌验证
         if ($this->request->input('key') == 'stop') {
             $user_config->google_verify = 0;
             $user_config->save();
-            return $this->success('', __('Closed successfully'));
+            return $this->success('', __('success.closed_successfully'));
         }
     }
 
@@ -724,13 +749,6 @@ class UserController extends AbstractController
 
         return $this->success(__('success.get_success'),$data);
     }
-
-    public function test()
-    {
-        echo __('passwords.password');
-    }
-
-
 
 
 }

@@ -20,8 +20,20 @@ Router::post('/user/register', 'App\Controller\Auth\RegisterController@register'
 //必须验证TOKEN
 Router::addGroup('/user/', function () {
 	Router::get('details','App\Controller\UserController@details');
+	Router::get('loginHistory','App\Controller\UserController@loginHistory');
     Router::post('logout', 'App\Controller\Auth\LoginController@logout');
     Router::get('registerLink','App\Controller\UserController@registerLink');
+    Router::post('updateAvatar','App\Controller\UserController@updateAvatar');
+    Router::post('resetPassword','App\Controller\UserController@resetPassword');
+    Router::post('resetPaymentPassword','App\Controller\UserController@resetPaymentPassword');
+    Router::post('forgetPassword','App\Controller\UserController@forgetPassword');
+    Router::post('createPaymentPassword','App\Controller\UserController@createPaymentPassword');
+    Router::post('phoneBind','App\Controller\UserController@phoneBind');
+    Router::post('emailBind','App\Controller\UserController@emailBind');
+    Router::post('createGoogleSecret','App\Controller\UserController@createGoogleSecret');
+    Router::post('authenticatorBind','App\Controller\UserController@authenticatorBind');
+    Router::post('googleVerifyStart','App\Controller\UserController@googleVerifyStart');
+    Router::get('recommends','App\Controller\UserController@recommends');
     
 }, [
     'middleware' => [App\Middleware\JwtAuthMiddleware::class]
