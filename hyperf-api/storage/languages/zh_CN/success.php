@@ -12,4 +12,5 @@ return [
 	'bind_successfully' => '绑定成功',
 	'open_successfully' => '开启成功',
 	'closed_successfully' => '关闭成功',
+	'cancel_order_successfully' => '撤单成功',
 ];

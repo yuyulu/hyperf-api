@@ -17,7 +17,7 @@ Router::addRoute(['GET', 'POST', 'HEAD'], '/', 'App\Controller\IndexController@i
 Router::post('/user/login', 'App\Controller\Auth\LoginController@login');
 Router::post('/user/register', 'App\Controller\Auth\RegisterController@register');
 
-//必须验证TOKEN
+//用户管理 必须验证TOKEN
 Router::addGroup('/user/', function () {
 	Router::get('details','App\Controller\UserController@details');
 	Router::get('loginHistory','App\Controller\UserController@loginHistory');
@@ -35,6 +35,20 @@ Router::addGroup('/user/', function () {
     Router::post('googleVerifyStart','App\Controller\UserController@googleVerifyStart');
     Router::get('recommends','App\Controller\UserController@recommends');
     
+}, [
+    'middleware' => [App\Middleware\JwtAuthMiddleware::class]
+]);
+
+//合约交易 必须验证TOKEN
+Router::addGroup('/contract/', function () {
+    Router::post('createOrder','App\Controller\ContractController@createOrder');
+    Router::post('closePosition','App\Controller\ContractController@closePosition');
+    Router::post('closePositionAll','App\Controller\ContractController@closePositionAll');
+    Router::post('setProfitOrLoss','App\Controller\ContractController@setProfitOrLoss');
+    Router::post('cancelOrder','App\Controller\ContractController@cancelOrder');
+    Router::get('transData','App\Controller\ContractController@transData');
+    Router::get('orderList','App\Controller\ContractController@orderList');
+    Router::get('statistics','App\Controller\ContractController@statistics');
 }, [
     'middleware' => [App\Middleware\JwtAuthMiddleware::class]
 ]);

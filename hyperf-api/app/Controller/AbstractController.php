@@ -62,12 +62,12 @@ abstract class AbstractController
         return ['msg' => $message, 'code' => 500, 'data' => ''];
     }
 
-    public function upload($file,$filesystem) {
+    public function upload($file,$filesystem)
+    {
         // 1.是否上传成功
         if (! $file->isValid()) {
             return ['code' => 500,'msg' => __('failed.upload_failed')];
         }
-
 
         // 2.是否符合文件类型 getClientOriginalExtension 获得文件后缀名
         $fileExtension = $file->getExtension();
@@ -85,7 +85,6 @@ abstract class AbstractController
         $fileName = 'images/'.date('Y_m_d').'/'.md5($tmpFile) .mt_rand(0,9999).'.'. $fileExtension;
 
         // Process Upload
-        $file = $this->request->file('upload');
         $stream = fopen($tmpFile, 'r+');
         $filesystem->writeStream(
             $fileName,
@@ -104,8 +103,9 @@ abstract class AbstractController
 
     }
 
-    public function base64Upload($base64_img, $filesystem){
-        if(preg_match('/^(data:\s*image\/(\w+);base64,)/', $base64_img, $result)){
+    public function base64Upload($base64_img, $filesystem)
+    {
+        if (preg_match('/^(data:\s*image\/(\w+);base64,)/', $base64_img, $result)) {
             $type = $result[2];
             if(!in_array($type,array('pjpeg','jpeg','jpg','gif','bmp','png'))){
                 return ['code' => 500,'msg' => __('messages.file_format_is_incorrect')];
@@ -130,7 +130,8 @@ abstract class AbstractController
         }
     }
 
-    public function privateDecrypt($password){
+    public function privateDecrypt($password)
+    {
 
         return ['code' => 200,'data' => $password];
         try{
@@ -140,12 +141,12 @@ abstract class AbstractController
 
             openssl_private_decrypt($encrypt_data, $decrypt_data, $private_key);
 
-            if(!$decrypt_data){
+            if (!$decrypt_data) {
                 return ['code' => 500,'msg' => __('messages.password_resolution_failed')];
             }
 
             return ['code' => 200,'data' => $decrypt_data];
-        }catch (\Throwable $throwable){
+        } catch (\Throwable $throwable) {
             return ['code' => 500,'msg' => __('messages.password_resolution_failed')];
         }
 

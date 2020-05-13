@@ -8,29 +8,17 @@ use App\Model\User;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
 use App\Controller\AbstractController;
-use Hyperf\Utils\ApplicationContext;
-use Hyperf\HttpServer\Contract\RequestInterface;
-use Hyperf\HttpServer\Contract\ResponseInterface;
-use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 
 class RegisterController extends AbstractController
 {
-
     /**
-     * @Inject()
-     * @var ValidatorFactoryInterface
+     * 用户注册
+     * @return [type] [description]
      */
-    protected $validationFactory;
-
-    /**
-     * 用户注册.
-     * @param  RequestInterface $request [description]
-     * @return [type]                    [description]
-     */
-    public function register(RequestInterface $request)
+    public function register()
     {
         $validator = $this->validationFactory->make(
-            $request->all(),
+            $this->request->all(),
             [
                 'phone' => 'sometimes|required|regex:/^1[3456789][0-9]{9}$/|unique:users',
                 'email' => 'sometimes|required|email|unique:users',
@@ -48,23 +36,20 @@ class RegisterController extends AbstractController
             ]
         );
 
-        if ($validator->fails()){
+        if ($validator->fails()) {
             // Handle exception
             $errorMessage = $validator->errors()->first();
             return $this->failed($errorMessage);
         }
 
-        $input = $request->post();
+        $input = $this->request->all();
 
-        if(!isset($input['phone']) && !isset($input['email']))
-        {
+        if (!isset($input['phone']) && !isset($input['email'])) {
             return $this->failed(__('messages.please_enter').__('keys.phone'));
         }
 
         // Do something
-        $hash = password_hash($request->input('password'), PASSWORD_DEFAULT);
-        
-        $container = ApplicationContext::getContainer();
+        $hash = password_hash($this->request->input('password'), PASSWORD_DEFAULT);
 
         $account = mt_rand(1000,9999);
 
@@ -73,7 +58,7 @@ class RegisterController extends AbstractController
         $input['password'] = $hash;
         $user = User::create($input);
 
-         if($user->phone){
+        if ($user->phone) {
             $user_config = [
                 'uid' => $user->id,
                 'phone_bind' => 1,
@@ -81,7 +66,7 @@ class RegisterController extends AbstractController
             ];
         }
 
-        if($user->email){
+        if ($user->email) {
             $user_config = [
                 'uid' => $user->id,
                 'email_bind' => 1,

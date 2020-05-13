@@ -27,5 +27,15 @@ class ContractService extends AbstractServiceClient
         return $this->__request(__FUNCTION__, compact('order'));
     }
 
+    public function closePosition(int $uid, int $order_id): array
+    {
+        return $this->__request(__FUNCTION__, compact('uid', 'order_id'));
+    }
+
+    public function closePositionAll(int $uid): array
+    {
+        return $this->__request(__FUNCTION__, compact('uid'));
+    }
+
 
 }

@@ -45,11 +45,11 @@ class User extends Model
     ];
 
     public function config() {
-        return $this->hasOne(UserConfig::class, 'id', 'uid');
+        return $this->hasOne(UserConfig::class, 'uid', 'id');
     }
     
     public function assets() {
-        return $this->hasOne(UserAssets::class, 'id', 'uid');
+        return $this->hasOne(UserAssets::class, 'uid', 'id');
     }
 
 

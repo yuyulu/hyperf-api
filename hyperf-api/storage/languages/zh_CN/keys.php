@@ -5,7 +5,8 @@ declare(strict_types=1);
 return [
 	'phone' => '手机号',
 	'email' => '邮箱',
-	'way'   => '登录方式',
+	'way'   => '登录来源',
+	'login_type' => '登录方式',
 	'code' => '验证码',
 	'phone_code' => '手机验证码',
 	'email_code' => '邮箱验证码',
