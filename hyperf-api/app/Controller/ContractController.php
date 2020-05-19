@@ -55,6 +55,7 @@ class ContractController extends AbstractController
         $validator = $this->validationFactory->make(
             $this->request->all(),
             [
+                'buyprice' => 'required',
                 'buynum' => 'required|numeric|min:0.1',
                 'type' => ['required',Rule::in([1, 2])],//1市价 2限价
                 'otype' => ['required',Rule::in([1, 2])],//1买涨 2买跌
@@ -63,6 +64,7 @@ class ContractController extends AbstractController
             ],
             [],
             [
+                'buyprice' => __('keys.buyprice'),
                 'buynum' => __('keys.buynum'),
                 'type' => __('keys.type'),
                 'otype' => __('keys.otype'),
@@ -266,7 +268,7 @@ class ContractController extends AbstractController
         ->orderBy('id','desc')
         ->get();
 
-        return $this->success($statistics, __('success.get_success'));
+        return $this->success($positions, __('success.get_success'));
     }
 
     /**
@@ -284,9 +286,9 @@ class ContractController extends AbstractController
         $totalprofit = 0;
         //保证金
         $totalmoney = 0;
-        foreach ($positions as $position) {
-            $redis = $this->container->get(RedisFactory::class)->get('price');
+        $redis = $this->container->get(RedisFactory::class)->get('price');
 
+        foreach ($positions as $position) {
             $newprice = $redis->get('vb:ticker:newprice:'.$position->code);
             if ($position->otype == 1) {
                 $yingkui = ($newprice - $position->buyprice) * $position->buynum;
@@ -310,7 +312,7 @@ class ContractController extends AbstractController
             'risk' => $risk.'%'
         ];
 
-        return $this->success($statistics, __('success.get_success'));
+        return $this->success($return, __('success.get_success'));
     }
 
     /**

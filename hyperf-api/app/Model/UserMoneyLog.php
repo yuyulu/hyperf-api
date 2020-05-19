@@ -9,5 +9,6 @@ use Hyperf\DbConnection\Model\Model;
 class UserMoneyLog extends Model
 {
     protected $table = 'user_money_log';
+    protected $guarded = ['id'];
 
 }

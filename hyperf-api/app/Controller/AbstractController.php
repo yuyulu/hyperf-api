@@ -98,7 +98,7 @@ abstract class AbstractController
         if ($filesystem->has($fileName)) {
             return ['code' => 200,'data' => $fileName];
         } else {
-            return ['code' => 500,'msg' => __('falied.upload_failed')];
+            return ['code' => 500,'msg' => __('failed.upload_failed')];
         }
 
     }
@@ -117,16 +117,18 @@ abstract class AbstractController
                 $fileName,
                 base64_decode(str_replace($result[1], '', $base64_img))
             );
-            fclose($stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
 
             if ($filesystem->has($fileName)) {
                 return ['code' => 200,'data' => $fileName];
             } else {
-                return ['code' => 500,'msg' => __('falied.upload_failed')];
+                return ['code' => 500,'msg' => __('failed.upload_failed')];
             }
 
         } else {
-            return ['code' => 500,'msg' => __('falied.upload_failed')];
+            return ['code' => 500,'msg' => __('failed.upload_failed')];
         }
     }
 

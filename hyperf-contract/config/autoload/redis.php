@@ -41,6 +41,7 @@ return [
     ],
     'server' => [
         'host' => env('REDIS_HOST', 'localhost'),
+        'auth' => env('REDIS_AUTH', null),
         'port' => (int) env('REDIS_PORT', 6379),
     ],
 ];

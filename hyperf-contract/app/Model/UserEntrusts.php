@@ -9,6 +9,7 @@ use Hyperf\DbConnection\Model\Model;
 class UserEntrusts extends Model
 {
     protected $table = 'user_entrusts';
+    protected $guarded = ['id'];
 
     public function createSN()
     {

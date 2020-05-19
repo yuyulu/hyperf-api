@@ -2,6 +2,7 @@
 namespace App\JsonRpc;
 
 use Hyperf\DbConnection\Db;
+use App\Model\UserAssets;
 use App\Model\UserEntrusts;
 use App\Model\UserPositions;
 use Hyperf\Redis\RedisFactory;
@@ -31,16 +32,16 @@ class ContractService
     {
         $uid = $input['uid'];//1市价 2 限价
         $type = $input['type'];//1市价 2 限价
-        $otype = $input['otype'];//1涨 2跌
-        $buynum = $input['buynum'];//买入数量
-        $buyprice = $input['buyprice']; //买入价格
+        $otype = (int)$input['otype'];//1涨 2跌
+        $buynum = (float)$input['buynum'];//买入数量
+        $buyprice = (float)$input['buyprice']; //买入价格
         $code = $input['code']; //产品标识
         $leverage = $input['leverage']; // 产品杠杆
 
         $product = Db::table('products')
-        ->where('code',$position->code)
+        ->where('code',$code)
         ->select('pname', 'code', 'leverage', 'min_order',
-                'max_order', 'max_chicang', 'spread', 'var_price')
+                'max_order', 'state', 'max_chicang', 'spread', 'var_price')
         ->first();
 
         if (!$product->state) {
@@ -48,10 +49,10 @@ class ContractService
         }
 
         $redis = $this->container->get(RedisFactory::class)->get('price');
-        $newprice = $redis->get('vb:ticker:newprice:'.$position->code);
+        $newprice = $redis->get('vb:ticker:newprice:'.$code);
 
         if (!$newprice) {
-            return ['msg' => __('failed.abnormal_data'), 'code' => 500, 'data' => ''];
+            return ['msg' => __('messages.abnormal_data'), 'code' => 500, 'data' => ''];
         }
 
         $actprice = number_format($newprice, 4, '.', '');
@@ -66,12 +67,12 @@ class ContractService
             }
         }
 
-        $num1 = Db::tbale('user_positions')
+        $num1 = Db::table('user_positions')
         ->where('uid', $uid)
         ->where('code', $product->code)
         ->sum('buynum');
 
-        $num2 = Db::tbale('user_entrusts')
+        $num2 = Db::table('user_entrusts')
         ->where('uid', $uid)
         ->where('code', $product->code)
         ->where('status',1)
@@ -84,10 +85,12 @@ class ContractService
         Db::beginTransaction();
         try{
             //查询余额
-            $asset = Db::table('user_assets')
+            $asset = UserAssets::query()
             ->where('uid',$uid)
             ->lockForUpdate()
             ->first();
+
+            $trans_fee = 0.3;
 
             //总金额
             $money = ($newprice * $buynum) / $leverage;
@@ -132,14 +135,32 @@ class ContractService
 
             if (!$save) {
                 Db::rollBack();
-                return $this->failed(__('faild.create_order_failed'));
+                return ['msg' => __('failed.create_order_failed'), 'code' => 500, 'data' => ''];
+            }
+
+            //扣除手续费
+            if ($fee > 0) {
+                $bool1 = $this->WriteMoneyLog->writeBalanceLog($asset,$order_id, 'USDT', $fee * (-1), 4, 'contract_create_order_fee');
+                if (!$bool1) {
+                    Db::rollBack();
+                    return ['msg' => __('failed.create_order_failed'), 'code' => 500, 'data' => ''];
+                }
+            }
+
+            //扣除保证金
+            if ($money > 0) {
+                $bool2 = $this->WriteMoneyLog->writeBalanceLog($asset,$order_id, 'USDT', $money * (-1), 5, 'contract_create_order_money');
+                if (!$bool2) {
+                    Db::rollBack();
+                    return ['msg' => __('failed.create_order_failed'), 'code' => 500, 'data' => ''];
+                }
             }
 
             Db::commit();
-            return $this->success('',__('success.create_order_successfully'));
+            return ['msg' => __('success.create_order_successfully'), 'code' => 200, 'data' => $info];
         } catch(\Throwable $ex) {
             Db::rollBack();
-            return $this->failed(__('faild.create_order_failed'));
+            return ['msg' => __('failed.create_order_failed'), 'code' => 500, 'data' => $ex->getMessage()];
         }
 
 
@@ -161,14 +182,14 @@ class ContractService
         $newprice = $redis->get('vb:ticker:newprice:'.$position->code);
 
         if (!$newprice) {
-            return ['msg' => __('failed.abnormal_data'), 'code' => 500, 'data' => ''];
+            return ['msg' => __('messages.abnormal_data'), 'code' => 500, 'data' => ''];
         }
 
         $server = $this->container->get(RedisFactory::class)->get('server');
 
         $queue_data['pc_type']  = 1;
         $queue_data['price']    = $newprice;
-        $queue_data['position'] = $hold_data;
+        $queue_data['position'] = $position;
         $queue_data['memo']     = 'close_position_manually';
 
         $taskId = $server->lpush('positions_process', json_encode($queue_data));
@@ -181,20 +202,20 @@ class ContractService
 
     public function closePositionAll(int $uid) :array
     {
-        $positions = Db::table('user_positions')->where('uid',$user->id)->get();
+        $positions = Db::table('user_positions')->where('uid',$uid)->get();
         if ($positions->count() < 1) {
             return ['msg' => __('messages.order_not_exists'), 'code' => 500, 'data' => ''];
         }
+        $redis = $this->container->get(RedisFactory::class)->get('price');
 
         //  进平仓队列处理
         foreach ($positions as $position) {
-            $product = Db::table('products')->where('code',$position->code)->value('id');
+            $product = Db::table('products')->where('code',$position->code)->value('pid');
 
             if(empty($product)){
                 continue;
             }
 
-            $redis = $this->container->get(RedisFactory::class)->get('price');
             $newprice = $redis->get('vb:ticker:newprice:'.$position->code);
 
             if (!$newprice) {
@@ -203,10 +224,11 @@ class ContractService
 
             $queue_data['pc_type']  = 1;
             $queue_data['price']    = $newprice;
-            $queue_data['position'] = $val;
+            $queue_data['position'] = $position;
             $queue_data['memo']     = 'close_position_manually';
 
-            $redis = Redis::connection('server');
+            $redis = $this->container->get(RedisFactory::class)->get('server');
+        
             $tid = $redis->lpush('positions_process', json_encode($queue_data));
             if ($tid === false) {
                 return ['msg' => __('failed.abnormal_data'), 'code' => 500, 'data' => ''];

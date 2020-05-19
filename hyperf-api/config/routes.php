@@ -53,6 +53,30 @@ Router::addGroup('/contract/', function () {
     'middleware' => [App\Middleware\JwtAuthMiddleware::class]
 ]);
 
+//实名认证 必须验证TOKEN
+Router::addGroup('/real-name/', function () {
+    Router::post('primary','App\Controller\AuthenticationController@primaryCertification');
+    Router::post('advanced','App\Controller\AuthenticationController@advancedCertification');
+}, [
+    'middleware' => [App\Middleware\JwtAuthMiddleware::class]
+]);
+
+//用户资产 必须验证TOKEN
+Router::addGroup('/assets/', function () {
+    Router::get('assetInfo','App\Controller\UserAssetsController@assetInfo');
+    Router::get('userMoneyLog','App\Controller\UserAssetsController@userMoneyLog');
+    Router::get('commissionDetails','App\Controller\UserAssetsController@commissionDetails');
+}, [
+    'middleware' => [App\Middleware\JwtAuthMiddleware::class]
+]);
+
+//网站信息 不验证TOKEN
+Router::addGroup('/software/', function () {
+    Router::get('content','App\Controller\SoftwareController@content');
+    Router::get('systemInformation','App\Controller\SoftwareController@systemInformation');
+    Router::get('systemPosts','App\Controller\SoftwareController@systemPosts');
+});
+
 //TOKEN可传可不传
 Router::addGroup('/user/', function () {
 	Router::post('sendEmail','App\Controller\UserController@sendEmail');

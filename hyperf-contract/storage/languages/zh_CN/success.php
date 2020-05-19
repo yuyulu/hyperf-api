@@ -15,5 +15,4 @@ return [
 	'cancel_order_successfully' => '撤单成功',
 	'closed_position_successfully' => '平仓成功',
 	'create_order_successfully' => '下单成功',
-	'real-name_authentication_succeeded' => '实名认证成功',
 ];

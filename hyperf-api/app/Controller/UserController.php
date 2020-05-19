@@ -74,16 +74,20 @@ class UserController extends AbstractController
 		$page = $this->request->input('page', 1);
 		$user = $this->request->getAttribute('user');
 
-		$return['count'] = Db::table('user_login_history')
+		$total_size = Db::table('user_login_history')
 			->where('uid', $user->id)
 			->count();
 
-		$return['logs'] = Db::table('user_login_history')
+		$logs = Db::table('user_login_history')
 			->where('uid', $user->id)
 			->orderBy('id', 'desc')
 			->offset(($page - 1) * 10)
 			->limit(10)
 			->get();
+
+	    $return['total_size'] = $total_size;
+        $return['total_page'] = ceil($total_size / 10);
+        $return['logs'] = $logs;
 
 		return $this->success($return, __('success.get_success'));
 	}
@@ -761,12 +765,20 @@ class UserController extends AbstractController
     {
 		$page = $this->request->input('page', 1);
 		$user = $this->request->getAttribute('user');
-		$recommends = User::where('recommend_id', $user->id)
-			->offset(($page - 1) * 10)
-			->limit(10)
-			->get();
 
-		return $this->success('', __('success.get_success'), $recommends);
+		$total_size = Db::table('users')->where('recommend_id', $user->id)->count();
+
+		$recommends = Db::table('users')
+		->where('recommend_id', $user->id)
+	    ->offset(($page - 1) * 10)
+		->limit(10)
+		->get();
+
+		$return['total_size'] = $total_size;
+        $return['total_page'] = ceil($total_size / 10);
+        $return['recommends'] = $recommends;
+
+		return $this->success($return, __('success.get_success'));
 	}
 
 	public function recommendInfo()
@@ -777,7 +789,7 @@ class UserController extends AbstractController
 		$assets = UserAssets::where('uid', $user->id)->first();
 		$data['commission'] = $assets->total_commission;
 
-		return $this->success(__('success.get_success'), $data);
+		return $this->success($data, __('success.get_success'));
 	}
 
 }

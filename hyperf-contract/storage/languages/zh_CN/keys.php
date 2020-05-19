@@ -5,8 +5,6 @@ declare(strict_types=1);
 return [
 	'phone' => '手机号',
 	'email' => '邮箱',
-	'name' => '姓名',
-	'card_id' => '身份证号',
 	'way'   => '登录来源',
 	'login_type' => '登录方式',
 	'code' => '验证码',
@@ -19,7 +17,6 @@ return [
 	'google_code' => '谷歌验证码',
 	'google_secret' => '谷歌密钥',
 	'buynum' => '买入数量',
-	'buyprice' => '买入价格',
 	'type' => '类型',
 	'otype' => '买入方向',
 	'pcode' => '币种标识',
