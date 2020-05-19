@@ -77,13 +77,9 @@ class ContractController extends AbstractController
             return $this->failed($errorMessage);
         }
 
+        $user = $this->request->getAttribute('user');
         $input = $this->request->all();
-
-        $state = Db::table('products')->where('code',$position->code)->value('state');
-        if (!$state) {
-            return $this->failed(__('messages.not_released'));
-        }
-
+        $input['uid'] = $user->id;
     	try {
 			return $contract->createOrder($input);
     	} catch (\Throwable $throwable) {
@@ -101,16 +97,6 @@ class ContractController extends AbstractController
     {
         $user = $this->request->getAttribute('user');
         $order_id = $this->request->input('order_id');
-        $position = Db::table('user_positions')->where('id',$order_id)->first();
-        if (empty($position)) {
-            return $this->failed(__('messages.order_not_exists'));
-        }
-
-        $state = Db::table('products')->where('code',$position->code)->value('state');
-        if (!$state) {
-            return $this->failed(__('messages.not_released'));
-        }
-
         try {
             return $contract->closePosition((int)$user->id, (int)$order_id);
         } catch (\Throwable $throwable) {
@@ -126,12 +112,6 @@ class ContractController extends AbstractController
     public function closePositionAll(ContractService $contract)
     {
         $user = $this->request->getAttribute('user');
-        $position = Db::table('user_positions')
-        ->where('uid',$user->id)->first();
-        if (empty($position)) {
-            return $this->failed(__('messages.order_not_exists'));
-        }
-
         try {
             return $contract->closePositionAll((int)$user->id);
         } catch (\Throwable $throwable) {
@@ -238,6 +218,7 @@ class ContractController extends AbstractController
             $bool1 = $this->WriteMoneyLog->writeBalanceLog($asset,$entrust->id, 'USDT', $money, 3, 'contract_cancel_order');
 
             if (!$bool1) {
+                Db::rollBack();
                 return $this->failed(__('faild.cancel_order_failed'));
             }
 
@@ -248,6 +229,7 @@ class ContractController extends AbstractController
             ->update(['status' => 3]);
 
             if (!$bool2) {
+                Db::rollBack();
                 return $this->failed(__('faild.cancel_order_failed'));
             }
 

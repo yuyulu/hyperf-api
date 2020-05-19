@@ -13,4 +13,6 @@ return [
 	'open_successfully' => '开启成功',
 	'closed_successfully' => '关闭成功',
 	'cancel_order_successfully' => '撤单成功',
+	'closed_position_successfully' => '平仓成功',
+	'create_order_successfully' => '下单成功',
 ];

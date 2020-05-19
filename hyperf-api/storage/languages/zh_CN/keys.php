@@ -24,6 +24,7 @@ return [
 	'min_order' => '最小下单量',
 	'max_order' => '最大下单量',
 	'max_chicang' => '最大持仓量',
+	'close_position_manually' => '手动平仓',
 
 ];
 

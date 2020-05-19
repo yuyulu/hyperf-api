@@ -22,9 +22,9 @@ class ContractService extends AbstractServiceClient
      */
     protected $protocol = 'jsonrpc-http';
 
-    public function createOrder(array $order): array
+    public function createOrder(array $input): array
     {
-        return $this->__request(__FUNCTION__, compact('order'));
+        return $this->__request(__FUNCTION__, compact('input'));
     }
 
     public function closePosition(int $uid, int $order_id): array

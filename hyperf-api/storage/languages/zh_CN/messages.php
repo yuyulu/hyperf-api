@@ -8,6 +8,7 @@ return [
 	'does_not_exist' => '不存在',
 	'parameter_error' => '参数错误',
 	'abnormal_data' => '数据异常',
+	'insufficient_balance' => '余额不足',
 	'profit_must_be_greater_than_newprice' => '止盈价格必须大于实时价',
 	'loss_must_be_greater_than_newprice' => '止损价格必须大于实时价',
 	'profit_must_be_less_than_newprice' => '止盈价格必须小于实时价',
