@@ -12,13 +12,23 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Hyperf\Di\Annotation\Inject;
+use App\Service\AutoConfirmationService;
+
 class IndexController extends AbstractController
 {
+	/**
+     * @Inject
+     * @var AutoConfirmationService
+     */
+    protected $AutoConfirmationService;
+
     public function index()
     {
-        \App\Model\User::where('id',1)
-        ->with('config')
-        ->first();
+        // $params['trans_id'] = 23;
+        // $params['type'] = 1;//1自动确认 2自动取消
+
+        // $push = $this->AutoConfirmationService->push($params,3);
     }
 
 

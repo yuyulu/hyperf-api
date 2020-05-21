@@ -22,7 +22,6 @@ class RegisterController extends AbstractController
             [
                 'phone' => 'sometimes|required|regex:/^1[3456789][0-9]{9}$/|unique:users',
                 'email' => 'sometimes|required|email|unique:users',
-                'way' => 'required',
                 'password' => 'required|string|min:6|max:12|confirmed',
                 'password_confirmation' => 'required|string|min:6|max:12',
             ],
@@ -30,7 +29,6 @@ class RegisterController extends AbstractController
             [
                 'phone' => __('keys.phone'),
                 'email' => __('keys.email'),
-                'way' => __('keys.way'),
                 'password' => __('keys.password'),
                 'password_confirmation' => __('keys.password_confirmation'),
             ]
@@ -81,6 +79,6 @@ class RegisterController extends AbstractController
             'uid' => $user->id
         ]);
 
-        return $this->success('',__('messages.register_success'));
+        return $this->success('',__('success.register_success'));
     }
 }

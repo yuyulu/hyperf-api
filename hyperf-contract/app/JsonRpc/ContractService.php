@@ -140,7 +140,7 @@ class ContractService
 
             //扣除手续费
             if ($fee > 0) {
-                $bool1 = $this->WriteMoneyLog->writeBalanceLog($asset,$order_id, 'USDT', $fee * (-1), 4, 'contract_create_order_fee');
+                $bool1 = $this->WriteMoneyLog->writeBalanceLog($asset,$order_id, 'USDT', $fee * (-1), 1, 'contract_create_order_fee');
                 if (!$bool1) {
                     Db::rollBack();
                     return ['msg' => __('failed.create_order_failed'), 'code' => 500, 'data' => ''];
@@ -149,7 +149,7 @@ class ContractService
 
             //扣除保证金
             if ($money > 0) {
-                $bool2 = $this->WriteMoneyLog->writeBalanceLog($asset,$order_id, 'USDT', $money * (-1), 5, 'contract_create_order_money');
+                $bool2 = $this->WriteMoneyLog->writeBalanceLog($asset,$order_id, 'USDT', $money * (-1), 2, 'contract_create_order_money');
                 if (!$bool2) {
                     Db::rollBack();
                     return ['msg' => __('failed.create_order_failed'), 'code' => 500, 'data' => ''];

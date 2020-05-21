@@ -6,10 +6,9 @@ namespace App\Model;
 
 use Hyperf\DbConnection\Model\Model;
 
-class UserConfig extends Model
+class Fbappeal extends Model
 {
-    protected $table = 'user_config';
-
+    protected $table = 'fb_appeal';
     protected $guarded = ['id'];
 
 }

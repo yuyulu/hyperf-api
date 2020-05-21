@@ -123,6 +123,7 @@ trait BurstProcess
         } else {
         	$logger->error('REDIS上锁== '.$minPosition->uid.'=='.$minPosition->id);
             $redis->setex($minPosition->uid . ':bc_lock',10,1);
+            return true;
         }
     }
 }

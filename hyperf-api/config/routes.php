@@ -16,6 +16,8 @@ Router::addRoute(['GET', 'POST', 'HEAD'], '/', 'App\Controller\IndexController@i
 
 Router::post('/user/login', 'App\Controller\Auth\LoginController@login');
 Router::post('/user/register', 'App\Controller\Auth\RegisterController@register');
+//交易大厅
+Router::get('/trade/trading', 'App\Controller\TradeController@trading');
 
 //用户管理 必须验证TOKEN
 Router::addGroup('/user/', function () {
@@ -70,7 +72,34 @@ Router::addGroup('/assets/', function () {
     'middleware' => [App\Middleware\JwtAuthMiddleware::class]
 ]);
 
-//网站信息 不验证TOKEN
+//商家管理 必须验证TOKEN
+Router::addGroup('/shop/', function () {
+    Router::post('shopApply','App\Controller\ShopController@shopApply');
+    Router::post('shopCancel','App\Controller\ShopController@shopCancel');
+    Router::post('postOrder','App\Controller\ShopController@postOrder');
+    Router::get('orderList','App\Controller\ShopController@orderList');
+    Router::post('cancelOrder','App\Controller\ShopController@cancelOrder');
+    Router::post('shopPay','App\Controller\ShopController@shopPay');
+    Router::get('payList','App\Controller\ShopController@payList');
+    Router::post('setPayStatus','App\Controller\ShopController@setPayStatus');
+}, [
+    'middleware' => [App\Middleware\JwtAuthMiddleware::class]
+]);
+
+//法币交易 必须验证TOKEN
+Router::addGroup('/trade/', function () {
+   Router::post('createOrder','App\Controller\TradeController@createOrder');
+   Router::get('orderDetail','App\Controller\TradeController@orderDetail');
+   Router::post('setOrderStatus','App\Controller\TradeController@setOrderStatus');
+   Router::post('confirm','App\Controller\TradeController@confirm');
+   Router::post('appeal','App\Controller\TradeController@appeal');
+   Router::post('cancelOrder','App\Controller\TradeController@cancelOrder');
+   Router::get('myOrderList','App\Controller\TradeController@myOrderList');
+}, [
+    'middleware' => [App\Middleware\JwtAuthMiddleware::class]
+]);
+
+//不验证TOKEN
 Router::addGroup('/software/', function () {
     Router::get('content','App\Controller\SoftwareController@content');
     Router::get('systemInformation','App\Controller\SoftwareController@systemInformation');

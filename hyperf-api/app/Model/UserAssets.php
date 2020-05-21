@@ -10,5 +10,5 @@ class UserAssets extends Model
 {
     protected $table = 'user_assets';
 
-    protected $fillable = ['uid'];
+    protected $guarded = ['id'];
 }

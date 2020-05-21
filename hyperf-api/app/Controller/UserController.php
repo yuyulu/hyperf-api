@@ -78,7 +78,7 @@ class UserController extends AbstractController
 			->where('uid', $user->id)
 			->count();
 
-		$logs = Db::table('user_login_history')
+		$details = Db::table('user_login_history')
 			->where('uid', $user->id)
 			->orderBy('id', 'desc')
 			->offset(($page - 1) * 10)
@@ -87,7 +87,7 @@ class UserController extends AbstractController
 
 	    $return['total_size'] = $total_size;
         $return['total_page'] = ceil($total_size / 10);
-        $return['logs'] = $logs;
+        $return['details'] = $details;
 
 		return $this->success($return, __('success.get_success'));
 	}
@@ -768,7 +768,7 @@ class UserController extends AbstractController
 
 		$total_size = Db::table('users')->where('recommend_id', $user->id)->count();
 
-		$recommends = Db::table('users')
+		$details = Db::table('users')
 		->where('recommend_id', $user->id)
 	    ->offset(($page - 1) * 10)
 		->limit(10)
@@ -776,7 +776,7 @@ class UserController extends AbstractController
 
 		$return['total_size'] = $total_size;
         $return['total_page'] = ceil($total_size / 10);
-        $return['recommends'] = $recommends;
+        $return['details'] = $details;
 
 		return $this->success($return, __('success.get_success'));
 	}

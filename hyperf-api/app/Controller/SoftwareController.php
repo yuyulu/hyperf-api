@@ -34,7 +34,7 @@ class SoftwareController
     	$total_size = Db::table('xy_blocks_msg')
     	->where('lang',$locale)->count();
 
-    	$blocks = Db::table('xy_blocks_msg')
+    	$details = Db::table('xy_blocks_msg')
     	->where('lang',$locale)
         ->select('id','bm_title as title','pic_addr','content','issue_time as created_at')
         ->orderBy('created_at','desc')
@@ -44,7 +44,7 @@ class SoftwareController
 
 		$return['total_size'] = $total_size;
         $return['total_page'] = ceil($total_size / 10);
-        $return['blocks'] = $blocks;
+        $return['details'] = $details;
 
         return $this->success($return, __('success.get_success'));
     }
@@ -64,7 +64,7 @@ class SoftwareController
         ->where('locale',$locale)
     	->count();
 
-    	$posts = Db::table('system_posts')
+    	$details = Db::table('system_posts')
     	->where('type',$type)
         ->where('locale',$locale)
         ->orderBy('created_at','desc')
@@ -74,7 +74,7 @@ class SoftwareController
 
         $return['total_size'] = $total_size;
         $return['total_page'] = ceil($total_size / 10);
-        $return['posts'] = $posts;
+        $return['details'] = $details;
 
         return $this->success($return, __('success.get_success'));
     }

@@ -341,11 +341,17 @@ class ContractController extends AbstractController
             $query->where('created_at','<=', $end_time);
         }
 
-        $orders = $query->where('uid', $user->id)
+        $total_size = $query->where('uid',$user->id)->count();
+
+        $details = $query->where('uid', $user->id)
             ->orderBy('id', 'desc')
             ->offset(($page - 1) * 10)
             ->limit(10)
             ->get();
+
+        $return['total_size'] = $total_size;
+        $return['total_page'] = ceil($total_size / 10);
+        $return['details'] = $details;
 
         return $this->success($orders, __('success.get_success'));
     }

@@ -30,7 +30,9 @@
         "hyperf/rpc-client": "~1.1.0",
         "hyperf/rpc-server": "~1.1.0",
         "hyperf/constants": "~1.1.0",
-        "hyperf/async-queue": "~1.1.0"
+        "hyperf/async-queue": "~1.1.0",
+        "yurunsoft/phpmailer-swoole":"~1.0",
+        "hyperf/translation": "^1.1"
     },
     "require-dev": {
         "swoft/swoole-ide-helper": "^4.2",

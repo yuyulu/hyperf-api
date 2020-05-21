@@ -43,14 +43,14 @@ class UserAssetsController extends AbstractController
 
         $total_size = $query->where('uid',$user->id)->count();
 
-        $logs = $query->where('uid',$user->id)
+        $details = $query->where('uid',$user->id)
         ->offset(($page - 1) * 10)
         ->limit(10)
         ->get();
 
         $return['total_size'] = $total_size;
         $return['total_page'] = ceil($total_size / 10);
-        $return['logs'] = $logs;
+        $return['details'] = $details;
 
         return $this->success($return,__('success.get_success'));
     }
@@ -76,7 +76,7 @@ class UserAssetsController extends AbstractController
 
         $return['total_size'] = $total_size;
         $return['total_page'] = ceil($total_size / 10);
-        $return['logs'] = $logs;
+        $return['details'] = $details;
 
         return $this->success($return,__('success.get_success'));
     }
