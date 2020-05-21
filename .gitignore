@@ -13,3 +13,4 @@ vendor/
 .phpunit*
 sftp-config.json
 match-engine/
+hyperf-trade/
