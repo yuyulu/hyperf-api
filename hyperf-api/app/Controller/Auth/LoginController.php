@@ -5,7 +5,7 @@ declare(strict_types = 1);
 namespace App\Controller\Auth;
 
 use App\Model\User;
-use Phper666\JwtAuth\Jwt;
+use Phper666\JWTAuth\JWT;
 use Hyperf\DbConnection\Db;
 use App\Controller\AbstractController;
 use Hyperf\Di\Annotation\Inject;
@@ -15,7 +15,7 @@ class LoginController extends AbstractController
     /**
      * @Inject
      *
-     * @var Jwt
+     * @var JWT
      */
     protected $jwt;
 

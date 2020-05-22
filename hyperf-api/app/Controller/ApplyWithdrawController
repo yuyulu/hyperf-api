@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller;
+
+class ApplyWithdrawController extends AbstractController
+{
+
+	/**
+	 * 提币条件
+	 * @return [type] [description]
+	 */
+    public function checkBalance()
+    {
+        $user = $this->request->getAttribute('user');
+        $asset = Db::table('user_assets')->where('uid',$user->id)->first();
+
+        $config = Db::table('admin_config')->where('name','like','tibi.%')->pluck('value','name');
+        $return['balance'] = $asset->balance;
+        $return['withdraw_min'] = $config['tibi.min_num'];
+        $return['withdraw_max'] = $config['tibi.max_num'];
+        $return['handling_fee'] = $config['tibi.fee'];
+
+        return $this->success($return,__('success.get_success'));
+    }
+
+}

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Middleware;
 
 use App\Model\User;
-use Phper666\JwtAuth\Jwt;
+use Phper666\JWTAuth\JWT;
 use Hyperf\Utils\Context;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -24,7 +24,7 @@ class JwtNotMandatoryMiddleware implements MiddlewareInterface
     protected $prefix = 'Bearer';
     protected $jwt;
 
-    public function __construct(HttpResponse $response, Jwt $jwt)
+    public function __construct(HttpResponse $response, JWT $jwt)
     {
         $this->response = $response;
         $this->jwt      = $jwt;

@@ -151,11 +151,11 @@ class UserController extends AbstractController
 		$querys = '';
 		$querys .= '?recommend=' . $user->account;
 
-		$qrcode = '';
+		$qrcode = new \Endroid\QrCode\QrCode($url . $querys);;
 
 		$data['account'] = $user->account;
 		$data['url'] = $url . $querys;
-		$data['qrcode'] = 'data:image/png;base64,' . base64_encode($qrcode);
+		$data['qrcode'] = 'data:image/png;base64,' . base64_encode($qrcode->writeString());
 
 		return $this->success($data, __('success.get_success'));
 	}
@@ -645,14 +645,15 @@ class UserController extends AbstractController
 	 */
 	public function createGoogleSecret()
     {
-		$createSecret = $this->doCreateSecret();
+    	$array = \Earnp\GoogleAuthenticator\GoogleAuthenticator::CreateSecret();
+    	$qrCodeUrl="otpauth://totp/?secret=".$array['secret'];
+    	$QrCode = new \Endroid\QrCode\QrCode($qrCodeUrl);
+
+		$secret['secret'] = $array['secret'];
+		$secret['codeurl'] = 'data:image/png;base64,'.base64_encode($QrCode->writeString());
 		// 自定义参数，随表单返回
 		$parameter = [];
-		return $this->success(
-			$this->successStatus,
-			__('success.get_success'),
-			['createSecret' => $createSecret, "parameter" => $parameter]
-		);
+		return $this->success(['createSecret' => $secret, "parameter" => $parameter],__('success.get_success'));
 	}
 
 	/**
@@ -693,9 +694,9 @@ class UserController extends AbstractController
 
 		//检测验证码
 		if ($user_config->login_type == 1) {
-			$result = $this->checksms->checkSmsCode($user->phone, $email);
+			$result = $this->checksms->checkSmsCode($user->phone, $post['code']);
 		} else {
-			$result = $this->checkemail->checkEmailCode($user->email, $email);
+			$result = $this->checkemail->checkEmailCode($user->email, $post['code']);
 		}
 
 		if ($result['code'] != 200) {
@@ -704,7 +705,7 @@ class UserController extends AbstractController
 
 		$google = $post['google_secret'];
 		// 验证验证码和密钥是否相同
-		if ($this->CheckCode($google, $post['google_code'])) {
+		if (\Earnp\GoogleAuthenticator\GoogleAuthenticator::CheckCode($google, $post['google_code'])) {
 			$user_config->google_secret = $post['google_secret'];
 			$user_config->google_bind = 1;
 			$user_config->google_verify = 1;
@@ -729,15 +730,20 @@ class UserController extends AbstractController
 		}
 
 		// 验证验证码和密钥是否相同
-		if (!$this->CheckCode($user_config->google_secret, $this->request->input('google_code'))) {
+		if (!\Earnp\GoogleAuthenticator\GoogleAuthenticator::CheckCode($user_config->google_secret, $this->request->input('google_code'))) {
 			return $this->failed(__('messages.google_code_error'));
 		}
 
 		if ($this->request->input('key') == 'stop') {
 			//检测验证码
-			$result1 = $this->checkSmsCode($user->phone, $this->request->input('code'));
-			$result2 = $this->checkEmailCode($user->email, $this->request->input('code'));
-			if ($result1['code'] != 200 && $result2['code'] != 200) {
+			$code = $this->request->input('code');
+			if ($user_config->login_type == 1) {
+				$result = $this->checksms->checkSmsCode($user->phone, $code);
+			} else {
+				$result = $this->checkemail->checkEmailCode($user->email, $code);
+			}
+
+			if ($result['code'] != 200) {
 				return $this->failed(__('messages.code_error'));
 			}
 		}
@@ -769,6 +775,7 @@ class UserController extends AbstractController
 		$total_size = Db::table('users')->where('recommend_id', $user->id)->count();
 
 		$details = Db::table('users')
+		->select('id','account','phone','email','name')
 		->where('recommend_id', $user->id)
 	    ->offset(($page - 1) * 10)
 		->limit(10)
@@ -784,7 +791,7 @@ class UserController extends AbstractController
 	public function recommendInfo()
     {
 		$user = $this->request->getAttribute('user');
-		$data['recommends'] = User::where('recommend_id', $user->id)
+		$data['recommends'] = Db::table('users')->where('recommend_id', $user->id)
 			->count();
 		$assets = UserAssets::where('uid', $user->id)->first();
 		$data['commission'] = $assets->total_commission;

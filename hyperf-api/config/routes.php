@@ -18,7 +18,10 @@ Router::post('/user/login', 'App\Controller\Auth\LoginController@login');
 Router::post('/user/register', 'App\Controller\Auth\RegisterController@register');
 //交易大厅
 Router::get('/trade/trading', 'App\Controller\TradeController@trading');
-
+//K线历史
+Router::get('/ticket/kline', 'App\Controller\TicketController@kline');
+//盘口深度
+Router::get('/ticket/getDepth', 'App\Controller\TicketController@getDepth');
 //用户管理 必须验证TOKEN
 Router::addGroup('/user/', function () {
 	Router::get('details','App\Controller\UserController@details');
@@ -95,6 +98,14 @@ Router::addGroup('/trade/', function () {
    Router::post('appeal','App\Controller\TradeController@appeal');
    Router::post('cancelOrder','App\Controller\TradeController@cancelOrder');
    Router::get('myOrderList','App\Controller\TradeController@myOrderList');
+}, [
+    'middleware' => [App\Middleware\JwtAuthMiddleware::class]
+]);
+
+//用户充值 必须验证TOKEN
+Router::addGroup('/recharge/', function () {
+   Router::post('walletRecharge','App\Controller\RechargeController@walletRecharge');
+   Router::get('index','App\Controller\RechargeController@index');
 }, [
     'middleware' => [App\Middleware\JwtAuthMiddleware::class]
 ]);

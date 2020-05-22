@@ -18,4 +18,5 @@ return [
 	'mark_failed' => '标记失败!',
 	'confirmation_failed' => '确认失败',
 	'appeal_failed' => '申诉失败',
+	'get_failed' => '获取失败!',
 ];
