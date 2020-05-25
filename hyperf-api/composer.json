@@ -32,9 +32,12 @@
         "hyperf/constants": "~1.1.0",
         "hyperf/async-queue": "~1.1.0",
         "hyperf/translation": "^1.1",
-        "phpqrcode/phpqrcode": "dev-master",
         "hyperf/validation": "^1.1",
-        "phper666/jwt-auth": "^3.0"
+        "phper666/jwt-auth": "^3.0",
+        "endroid/qr-code": "^3.7",
+        "earnp/laravel-google-authenticator": "^1.0",
+        "hyperf/filesystem": "^1.1",
+        "xxtime/flysystem-aliyun-oss": "^1.5"
     },
     "require-dev": {
         "swoft/swoole-ide-helper": "^4.2",

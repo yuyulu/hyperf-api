@@ -41,6 +41,8 @@ return [
 	'already_certified' => '已经认证过了',
 	'already_a_merchant' => '已经是商家了',
 	'not_yet_a_merchant' => '还不是商家',
+	'address_is_illegal' => '地址不合法',
+	'cannot_be_added_repeatedly' => '不能重复添加该地址',
 	'please_wait_for_review' => '已提交申请，请等待审核',
 	'outstanding_contract_transaction_order' => '存在未完成的合约交易订单!',
 	'outstanding_trade_order' => '存在未完成的求购或出售订单!',

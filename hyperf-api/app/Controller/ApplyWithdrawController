@@ -4,8 +4,26 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Carbon\Carbon;
+use Hyperf\DbConnection\Db;
+use App\Model\Authentication;
+use Hyperf\Di\Annotation\Inject;
+use App\Service\CheckEmailService;
+use App\Service\CheckSmsService;
+
 class ApplyWithdrawController extends AbstractController
 {
+    /**
+     * @Inject
+     * @var CheckSmsService
+     */
+    protected $checksms;
+
+    /**
+     * @Inject
+     * @var CheckEmailService
+     */
+    protected $checkemail;
 
 	/**
 	 * 提币条件
@@ -25,4 +43,178 @@ class ApplyWithdrawController extends AbstractController
         return $this->success($return,__('success.get_success'));
     }
 
+    public function withdrawLog()
+    {
+        $user = $this->request->getAttribute('user');
+
+        $total_size = Db::table('user_withdraw')
+        ->where('uid',$user->id)
+        ->count();
+        $details = Db::table('user_withdraw')
+        ->where('uid',$user->id)
+        ->orderBy('id','desc')
+        ->get();
+
+        $return['total_size'] = $total_size;
+        $return['total_page'] = ceil($total_size / 10);
+        $return['details'] = $details;
+
+        return $this->success($return,__('success.get_success'));
+    }
+
+    public function createWithdrawAddress()
+    {
+        $validator = $this->validationFactory->make(
+            $this->request->all(),
+            [
+                'type' => 'required',
+                'address' => 'required',
+                'notes' => 'required',
+            ],
+            [],
+            [
+                'type' => __('keys.type'),
+                'address' => __('keys.wallet_address'),
+                'notes' => __('keys.notes'),
+            ]
+        );
+
+        if ($validator->fails()){
+            // Handle exception
+            $errorMessage = $validator->errors()->first();
+            return $this->failed($errorMessage);
+        }
+
+        $user = $this->request->getAttribute('user');
+        $post = $this->request->all();
+
+        // BTC地址合法校验
+        if ($post['type'] == 1) {
+            if (!(preg_match('/^(1|3)[a-zA-Z\d]{24,33}$/', $post['address']) &&
+                preg_match('/^[^0OlI]{25,34}$/', $post['address']))) {
+                return $this->failed('BTC'.__('address_is_illegal'));
+            }
+        }
+
+        //ETH地址合法校验
+        if ($post['type'] == 2) {
+            if (!(preg_match('/^(0x)?[0-9a-fA-F]{40}$/', $post['address']))) {
+                return $this->failed('ETH'.__('address_is_illegal'));
+            }
+        }
+
+        $address = Db::table('user_qianbao_address')
+        ->where('uid',$user->id)
+        ->where('type',$post['type'])
+        ->where('address',$post['address'])
+        ->first();
+
+        if (!empty($address)) {
+            return $this->failed('messages.cannot_be_added_repeatedly');
+        }
+
+        $now = Carbon::now();
+
+        Db::table('user_qianbao_address')->insert([
+            'uid' => $user->id,
+            'type' => $post['type'],
+            'address' => $post['address'],
+            'notes' => $post['notes'],
+            'created_at' => $now,
+            'updated_at' => $now
+        ]);
+
+        return $this->success('',__('success.added_successfully'));
+    }
+
+    public function applyWithdraw()
+    {
+        $validator = $this->validationFactory->make(
+            $this->request->all(),
+            [
+                'type' => 'required',
+                'address' => 'required',
+                'money' => 'required',
+                'code' => 'required',
+                'payment_password' => 'required',
+            ],
+            [],
+            [
+                'type' => __('keys.type'),
+                'address' => __('keys.wallet_address'),
+                'money' => __('keys.money'),
+                'code' => __('keys.code'),
+                'payment_password' => __('keys.payment_password'),
+            ]
+        );
+
+        if ($validator->fails()){
+            // Handle exception
+            $errorMessage = $validator->errors()->first();
+            return $this->failed($errorMessage);
+        }
+
+        $user = $this->request->getAttribute('user');
+        $user_config = $this->request->getAttribute('user_config');
+        $post = $this->request->all();
+
+        // BTC地址合法校验
+        if ($post['type'] == 1) {
+            if (!(preg_match('/^(1|3)[a-zA-Z\d]{24,33}$/', $post['address']) &&
+                preg_match('/^[^0OlI]{25,34}$/', $post['address']))) {
+                return $this->failed('BTC'.__('address_is_illegal'));
+            }
+        }
+
+        //ETH地址合法校验
+        if ($post['type'] == 2) {
+            if (!(preg_match('/^(0x)?[0-9a-fA-F]{40}$/', $post['address']))) {
+                return $this->failed('ETH'.__('address_is_illegal'));
+            }
+        }
+
+        if (!$user->payment_password) {
+            return $this->failed(__('keys.payment_password') . __('messages.not_set'));
+        }
+
+        $decrypt_payment_password = $this->privateDecrypt($post['payment_password']);
+
+        if ($decrypt_payment_password['code'] != 200) {
+            return $this->failed($decrypt_payment_password['msg']);
+        }
+        $payment_password = $decrypt_payment_password['data'];
+
+        if (!password_verify($payment_password, $user->payment_password)) {
+            return $this->failed(__('messages.payment_password_is_incorrect'));
+        }
+
+        if ($user->authentication != Authentication::ADVANCED_CHECK_AGREE) {
+            return $this->failed(__('messages.advanced_certification_first'));
+        }
+
+        if ($user_config->login_type == 1) {
+            //检测验证码
+            $result = $this->checksms->checkSmsCode($user->phone, $this->request->input('code'));
+        } else {
+            $result = $this->checkemail->checkEmailCode($user->email, $this->request->input('code'));
+        }
+
+        if ($result['code'] != 200) {
+            return $this->failed($result['msg']);
+        }
+
+        //提币条件
+        $config = Db::table('admin_config')->where('name','like','tibi.%')->pluck('value','name');
+
+        if ($post['money'] < $config['tibi.min_num']) {
+            return $this->failed();
+        }
+
+        if ($post['money'] > $config['tibi.max_num']) {
+            return $this->failed();
+        }
+
+        //查询是否有持仓单
+                
+    }
 }
